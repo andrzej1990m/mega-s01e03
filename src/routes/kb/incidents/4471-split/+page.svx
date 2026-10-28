@@ -1,0 +1,84 @@
+---
+layout: runbook
+title: '#4471 · split by cause, not subject'
+owner: andrzej1990m
+status: proposed
+reviewed: '2026-10-28'
+signature: andrzej1990m
+---
+
+<script>
+  import SplitSummary from '#lib/kb/SplitSummary.svelte';
+  import Callout from '#lib/kb/Callout.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
+</script>
+
+## Reviewed recommendation, not an accepted policy
+
+The 4 October export does not support treating [#4471](/kb/incidents/4471) as
+one proven cause with one fix. It contains two different date contracts going wrong.
+This analysis recommends a split; the support desk must approve any operational
+policy replacement. The old incident's “one issue, one fix queued” claim is not a
+safe description of this export.
+
+<Callout>
+<a href="/kb/decisions/0001-dedupe-by-subject">Decision 0001</a> and the
+<a href="/kb/triage/dedupe">subject-only triage rule</a> remain accepted historical records,
+unchanged here. Their subject-only merge instruction is outdated for this case:
+matching symptoms or subject lines do not establish matching causes.
+This page proposes a replacement approach; it does not silently accept one.
+</Callout>
+
+## What the export actually counts
+
+<SplitSummary />
+
+Counts run through the supplied `uniqueById`, `groupByCause` and tenant lookup
+in `locales.ts`. The classifier uses tenant locale, booking form and report
+channel, not the reporter's browser language. These are model assignments:
+not every assigned report independently proves its proposed cause.
+
+## Two defects, two engineering issues
+
+- **[Shared parser: issue #1](https://github.com/andrzej1990m/mega-s01e03/issues/1).**
+  The shared parser reads month first for day-first tenants. For example,
+  R-41200 (`harbour.dental`, app) says a 7 April reminder went out on 4 July.
+  Reproduce with `07/04/2026`: the tenant means 7 April, but month-first parsing
+  yields 4 July. Fix and test an explicit tenant date contract across shared-parser paths.
+- **[Booking-v3 hint: issue #2](https://github.com/andrzej1990m/mega-s01e03/issues/2).**
+  Booking-v3 displays `MM/DD/YYYY`, prompting month-first input, while the
+  form interprets it in the tenant's day-first order. R-41230 (`copper.studio`,
+  form) reports 1 June instead of 6 January. Entering `01/06/2026` following that
+  hint reproduces the mismatch. Align the displayed hint and submission contract;
+  test both, separately from the parser fix.
+
+## Uncertainty stays visible
+
+The desk-noted reports above describe one-day, calendar-boundary or delivery-timing
+symptoms, not demonstrated month/day transpositions. Keep them within their current
+parser assignment pending investigation. They do **not** prove a timezone/DST
+defect, nor a third root cause; do not discard them or count them again.
+Other assignments also need case-level confirmation. Locale and channel explain
+the model's grouping, not a verified reproduction for every report.
+
+## Proposed desk workflow
+
+1. Keep one report per ID. Read the body, intended date, resulting date and channel;
+   look up the tenant's locale and booking form. Do not infer the contract from
+   browser locale or `meta.intakeTag`.
+2. Compare reproduction paths and causes before merging. Route shared-parser
+   evidence to issue #1 and booking-v3 hint evidence to issue #2, keeping the
+   original report IDs and a cross-reference to #4471. A matching subject is
+   a search aid, not a merge decision; different subjects can still share a cause.
+3. If evidence is insufficient, mark the assignment provisional and ask for the
+   input, expected/output dates and path. Investigate the desk-noted cases without
+   inventing a third bucket or inflating counts.
+4. Ask the support desk to approve a new decision replacing the subject-only rule
+   before adopting this as policy. Preserve accepted decision 0001 as history.
+   Verify each defect independently before claiming #4471 resolved.
+
+Source: `reports-4471.json`, tenant directory, `desk-notes.json`, `causes.ts` and
+`locales.ts` in the supplied support KB export (2026-10-04). Published issues are
+engineering destinations, not evidence that the fixes or a policy change are accepted.
+
+<RenderStamp {signature} />
